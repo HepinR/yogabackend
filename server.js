@@ -10,7 +10,8 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const allowedOrigins = [
     'https://yogafront.netlify.app',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://localhost:10000'
 ];
 
 // Updated CORS configuration

@@ -1,21 +1,21 @@
-const mysql = require('pg');
-const dotenv = require('dotenv');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-dotenv.config();
-
-// Create a pool instead of a single connection
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT,
     ssl: {
         rejectUnauthorized: false
     }
 });
 
-
-// Test the connection
-pool.query('SELECT NOW()', (err, res) => {
+// Test connection
+pool.connect((err, client, done) => {
     if (err) {
-        console.error('Error connecting to the database:', err);
+        console.error('Database connection error:', err.stack);
     } else {
         console.log('Database connected successfully');
     }

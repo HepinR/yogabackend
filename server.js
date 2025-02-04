@@ -7,11 +7,11 @@ const enrollmentRoutes = require('./routes/enrollmentRoutes');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.DB_PORT;
+const PORT = process.env.PORT || 5001;
 const allowedOrigins = [
     'https://yogafront.netlify.app/',
     'http://localhost:3000',
-    'http://localhost:10000'
+    'http://localhost:50001'
 ];
 
 // Updated CORS configuration
@@ -93,4 +93,8 @@ pool.connect((err, client, done) => {
         });
     }
     if (done) done();
+});
+
+app.listen(PORT, '0.0.0.0', () => {  
+    console.log(`Server running on port ${PORT}`);
 });

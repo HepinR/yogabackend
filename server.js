@@ -7,8 +7,20 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-
-app.use(cors());
+const allowedOrigins = [
+    'https://yogafront.netlify.app',
+    'http://localhost:3000'
+];
+app.use(cors({
+    origin: function(origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
 app.use(express.json());
 
 // Root route

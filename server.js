@@ -1,20 +1,21 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const pool = require('./config/db');  // Add this line
+const pool = require('./config/db');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
 
 dotenv.config();
 
 const app = express();
+// Let Render assign the port or use 5000 for local development
 const PORT = process.env.PORT || 5001;
+
 const allowedOrigins = [
-    'https://yogafront.netlify.app/',
+    'https://yogafront.netlify.app',
     'http://localhost:3000',
-    'http://localhost:50001'
+    'http://localhost:5001'
 ];
 
-// Updated CORS configuration
 app.use(cors({
     origin: allowedOrigins,
     credentials: true
@@ -47,10 +48,9 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
-// Routes
 app.use('/api', enrollmentRoutes);
 
-// Health check with DB status
+// Health check
 app.get('/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
@@ -59,8 +59,8 @@ app.get('/health', async (req, res) => {
             database: 'Connected'
         });
     } catch (error) {
-        res.status(200).json({ 
-            status: 'OK',
+        res.status(500).json({ 
+            status: 'Error',
             database: 'Disconnected',
             error: error.message
         });
@@ -86,15 +86,12 @@ app.use((req, res) => {
 pool.connect((err, client, done) => {
     if (err) {
         console.error('Database connection error:', err.stack);
+        process.exit(1);
     } else {
         console.log('Database connected successfully');
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Server running on port ${PORT}`);
         });
     }
     if (done) done();
-});
-
-app.listen(PORT, '0.0.0.0', () => {  
-    console.log(`Server running on port ${PORT}`);
 });

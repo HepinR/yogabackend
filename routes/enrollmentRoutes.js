@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db');
+const pool = require('../config/db');
 
 // Get all batches
 router.get('/batches', async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM batches2'); 
-        res.json(rows);
+        const result = await pool.query('SELECT * FROM batches2');
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching batches:', error);
         res.status(500).json({ error: 'Failed to fetch batch times' });
@@ -20,61 +20,56 @@ router.get('/test', (req, res) => {
 
 // Create enrollment
 router.post('/enroll', async (req, res) => {
-    const connection = await db.getConnection();
+    const client = await pool.connect(); 
     
     try {
         const { name, age, email, phone, batchId } = req.body;
         
-        // Start transaction
-        await connection.beginTransaction();
+        await client.query('BEGIN'); 
 
         // Insert user
-        const [userResult] = await connection.execute(
-            'INSERT INTO users3 (name, age, email, phone) VALUES (?, ?, ?, ?)',
+        const userResult = await client.query(
+            'INSERT INTO users3 (name, age, email, phone) VALUES ($1, $2, $3, $4) RETURNING id',
             [name, age, email, phone]
         );
 
         // Insert enrollment
-        const [enrollmentResult] = await connection.execute(
-            'INSERT INTO enrollments3 (user_id, batch_id) VALUES (?, ?)',
-            [userResult.insertId, batchId]
+        const enrollmentResult = await client.query(
+            'INSERT INTO enrollments3 (user_id, batch_id) VALUES ($1, $2) RETURNING id',
+            [userResult.rows[0].id, batchId]
         );
 
-        // Update batch enrollment count
-        await connection.execute(
-            'UPDATE batches2 SET current_enrollments = current_enrollments + 1 WHERE id = ?',
+        // Update batch
+        await client.query(
+            'UPDATE batches2 SET current_enrollments = current_enrollments + 1 WHERE id = $1',
             [batchId]
         );
 
-        // Commit the transaction
-        await connection.commit();
+        await client.query('COMMIT');
         
-        connection.release();
-
         res.json({
             success: true,
-            enrollmentId: enrollmentResult.insertId,
+            enrollmentId: enrollmentResult.rows[0].id,
             message: 'Enrollment successful'
         });
 
     } catch (error) {
-        if (connection) {
-            await connection.rollback();
-            connection.release();
-        }
+        await client.query('ROLLBACK');
         console.error('Enrollment error:', error);
         res.status(500).json({ 
-            error: 'Enrollment failed', 
+            error: 'Enrollment failed',
             details: error.message,
             code: error.code 
         });
+    } finally {
+        client.release();
     }
 });
 
 // Get all enrollments
 router.get('/enrollments', async (req, res) => {
     try {
-        const [rows] = await db.query(`
+        const result = await pool.query(`
             SELECT 
                 e.id as enrollment_id,
                 u.name,
@@ -82,11 +77,11 @@ router.get('/enrollments', async (req, res) => {
                 u.phone,
                 b.time_slot,
                 e.enrollment_date
-            FROM enrollments e
-            JOIN users u ON e.user_id = u.id
-            JOIN batches b ON e.batch_id = b.id
+            FROM enrollments3 e
+            JOIN users3 u ON e.user_id = u.id
+            JOIN batches2 b ON e.batch_id = b.id
         `);
-        res.json(rows);
+        res.json(result.rows);
     } catch (error) {
         console.error('Error fetching enrollments:', error);
         res.status(500).json({ error: 'Failed to fetch enrollments' });

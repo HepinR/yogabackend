@@ -50,7 +50,6 @@ router.post('/enroll', async (req, res) => {
         res.json({
             success: true,
             enrollmentId: enrollmentResult.rows[0].id,
-            paymentId: paymentResult.rows[0].payment_id,
             message: 'Enrollment successful'
         });
 

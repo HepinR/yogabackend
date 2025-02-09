@@ -18,27 +18,6 @@ router.get('/test', (req, res) => {
     res.json({ message: 'Enrollment routes working' });
 });
 
-const generateUniquePaymentId = async (client) => {
-    let isUnique = false;
-    let paymentId;
-    
-    while (!isUnique) {
-        const randomNum = Math.floor(1000000 + Math.random() * 9000000); // Ensures 7 digits
-        paymentId = `YOGA${randomNum}`;
-
-        const existingPayment = await client.query(
-            'SELECT payment_id FROM payments WHERE payment_id = $1',
-            [paymentId]
-        );
-        
-        if (existingPayment.rows.length === 0) {
-            isUnique = true;
-        }
-    }
-    
-    return paymentId;
-};
-
 // Create enrollment
 router.post('/enroll', async (req, res) => {
     const client = await pool.connect(); 
@@ -58,18 +37,6 @@ router.post('/enroll', async (req, res) => {
         const enrollmentResult = await client.query(
             'INSERT INTO enrollments3 (user_id, batch_id) VALUES ($1, $2) RETURNING id',
             [userResult.rows[0].id, batchId]
-        );
-
-         // Generate unique payment ID
-        const paymentId = await generateUniquePaymentId(client);
-
-        // Create payment record
-        const paymentResult = await client.query(
-            `INSERT INTO payments 
-            (payment_id, enrollment_id, user_id, amount, status) 
-            VALUES ($1, $2, $3, $4, $5) 
-            RETURNING payment_id`,
-            [paymentId, enrollmentResult.rows[0].id, userResult.rows[0].id, 500, 'completed']
         );
 
         // Update batch
